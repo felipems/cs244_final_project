@@ -1,4 +1,3 @@
-
 import dpkt
 import socket
 import sys
@@ -118,9 +117,8 @@ def uniform_prob_sampling(all_packets, bad_ips, good_ips):
     print    
 
 def sample_packet(ip_packet, bad_ips, good_ips):
-    tcp = ip_packet.data
-
     if ip_packet.p == dpkt.ip.IP_PROTO_TCP:
+        tcp = ip_packet.data
         syn_flag =  (tcp.flags & dpkt.tcp.TH_SYN ) != 0
         ack_flag = (tcp.flags & dpkt.tcp.TH_ACK) != 0
         ip_source = socket.inet_ntoa(ip_packet.src) # get source ip address
@@ -133,6 +131,9 @@ def sample_packet(ip_packet, bad_ips, good_ips):
 
 
 def main(argv):
+    if len(argv) < 1:
+        print "Please include pcap file."
+        return 0
     
     try: 
         f = open(argv[0])
@@ -140,7 +141,11 @@ def main(argv):
         print "Cannot open file provided"
         return 0
 
+    raw_ip = False
     pcap = dpkt.pcap.Reader(f)
+    if pcap.datalink() == 101:
+        print "Raw IP"
+        raw_ip = True
 
     bad_ips = set()
     good_ips = set()
@@ -148,8 +153,11 @@ def main(argv):
 
     # creates the ground truth for the rest of the expermient.
     for ts, buf in pcap:
-        eth = dpkt.ethernet.Ethernet(buf)
-        ip = eth.data
+        if raw_ip:
+            ip = dpkt.ip.IP(buf)
+        else:
+            eth = dpkt.ethernet.Ethernet(buf)
+            ip = eth.data
         all_packets.append(ip)
         sample_packet(ip,bad_ips,good_ips);
     
