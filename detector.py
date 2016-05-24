@@ -2,12 +2,13 @@ import dpkt
 import socket
 import sys
 import random
+import time
 
 sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25, 1, 2, 10, 50, 100]
 def update_beliefs(bad_ips, good_ips):
     #This runs in n^2 time, but it doesn't really matter for such a small N. 
-    print "Evil ips size",len(bad_ips)
-    print "Good ips size",len(good_ips)
+    # print "Evil ips size",len(bad_ips)
+    # print "Good ips size",len(good_ips)
 
     for addr in good_ips:
         if addr in bad_ips:
@@ -17,7 +18,7 @@ def update_beliefs(bad_ips, good_ips):
     #     print evil_ip
 
     # print    
-    print "Evil ips size trimmed",len(bad_ips)           
+    # print "Evil ips size trimmed",len(bad_ips)           
     print
 def calculate_stats(sample_bad_ips, sample_good_ips, bad_ips, good_ips):
     
@@ -25,23 +26,24 @@ def calculate_stats(sample_bad_ips, sample_good_ips, bad_ips, good_ips):
             return -1, -1
 
     total_bad_ips = 0;  # find true positive rate
-    total_good_ips_bad = 0; # find false positive rate
+    total_good_ips_in_bad = 0; # find false positive rate
 
     for addr in sample_bad_ips:
         if addr in bad_ips:
             total_bad_ips += 1
         if addr in good_ips:
-            total_good_ips_bad += 1
+            total_good_ips_in_bad += 1
     
-    print "total_bad_ips: ", total_bad_ips, "total_good_ips_bad: ", total_good_ips_bad
+    print "total_bad_ips: ", total_bad_ips, "total_good_ips_in_bad: ", total_good_ips_in_bad, "Total len", len(sample_bad_ips)
 
-    true_positive_rate = total_bad_ips / len(sample_bad_ips)        
-    false_positive_rate = total_good_ips_bad / len(sample_bad_ips)       
+    true_positive_rate = float(total_bad_ips) / float(len(sample_bad_ips))        
+    false_positive_rate = float(total_good_ips_in_bad) / float(len(sample_bad_ips))       
     return true_positive_rate, false_positive_rate             
 
     
 def systematic_sampling(all_packets, bad_ips, good_ips):
-    print "Systematic_sampling"
+    print "******Systematic_sampling******"
+    print
     for rate in sampling_rates:
         # print "Rate is", rate
         num_packets_to_sample = round((rate/100.0) * len(all_packets))
@@ -58,12 +60,13 @@ def systematic_sampling(all_packets, bad_ips, good_ips):
             sample_packet(all_packets[i], sample_bad_ips, sample_good_ips)
 
         update_beliefs(sample_bad_ips, sample_good_ips)
-        tp, fp = calculate_stats(sample_good_ips, sample_good_ips, bad_ips, good_ips)   
+        tp, fp = calculate_stats(sample_bad_ips, sample_good_ips, bad_ips, good_ips)   
         print "TP = ",  tp , "FP = ",  fp   
     print
 
 def random_sampling(all_packets, bad_ips, good_ips):
-    print "Random_sampling"
+    print "******Random_sampling******"
+    print
     for rate in sampling_rates:
         # print "Rate is", rate
         num_packets_to_sample = round((rate/100.0) * len(all_packets))
@@ -85,12 +88,13 @@ def random_sampling(all_packets, bad_ips, good_ips):
             sample_packet(all_packets[i + modifier ], sample_bad_ips, sample_good_ips)
 
         update_beliefs(sample_bad_ips, sample_good_ips)
-        tp, fp = calculate_stats(sample_good_ips, sample_good_ips, bad_ips, good_ips)   
+        tp, fp = calculate_stats(sample_bad_ips, sample_good_ips, bad_ips, good_ips)   
         print "TP = ",  tp , "FP = ",  fp   
     print    
 
 def uniform_prob_sampling(all_packets, bad_ips, good_ips):
-    print "uniform_prob_sampling"
+    print "******Uniform_prob_sampling******"
+    print
     for rate in sampling_rates:
         # print "Rate is", rate
         prob_choosing_a_packet = rate/100.0
@@ -112,7 +116,7 @@ def uniform_prob_sampling(all_packets, bad_ips, good_ips):
                 sample_packet(all_packets[i], sample_bad_ips, sample_good_ips)
 
         update_beliefs(sample_bad_ips, sample_good_ips)
-        tp, fp = calculate_stats(sample_good_ips, sample_good_ips, bad_ips, good_ips)   
+        tp, fp = calculate_stats(sample_bad_ips, sample_good_ips, bad_ips, good_ips)   
         print "TP = ",  tp , "FP = ",  fp   
     print    
 
@@ -131,40 +135,57 @@ def sample_packet(ip_packet, bad_ips, good_ips):
 
 
 def main(argv):
+    time_start =time.asctime( time.localtime(time.time()) )
     if len(argv) < 1:
         print "Please include pcap file."
         return 0
-    
-    try: 
-        f = open(argv[0])
-    except IOError: 
-        print "Cannot open file provided"
-        return 0
-
-    raw_ip = False
-    pcap = dpkt.pcap.Reader(f)
-    if pcap.datalink() == 101:
-        print "Raw IP"
-        raw_ip = True
 
     bad_ips = set()
     good_ips = set()
     all_packets = []
 
-    # creates the ground truth for the rest of the expermient.
-    for ts, buf in pcap:
-        if raw_ip:
-            ip = dpkt.ip.IP(buf)
-        else:
-            eth = dpkt.ethernet.Ethernet(buf)
-            ip = eth.data
-        all_packets.append(ip)
-        sample_packet(ip,bad_ips,good_ips);
+    print "Using these files:"
+    for pcap_file in argv:
+        print pcap_file
     
+    for pcap_file in argv:
+        try: 
+            f = open(pcap_file)
+        except IOError: 
+            print "Cannot open file provided", pcap_file
+            return 0
+
+        raw_ip = False
+        pcap = dpkt.pcap.Reader(f)
+        if pcap.datalink() == 101:
+            print "Raw IP"
+            raw_ip = True
+
+        
+        # creates the ground truth for the rest of the expermient.
+        for ts, buf in pcap:
+            if raw_ip:
+                try:
+                    ip = dpkt.ip.IP(buf)
+                except :
+                    continue           
+            else:
+                eth = dpkt.ethernet.Ethernet(buf)
+                ip = eth.data
+            all_packets.append(ip)
+            sample_packet(ip,bad_ips,good_ips);
+    
+    print "Updating beliefs"
     update_beliefs(bad_ips, good_ips)     
     
-    systematic_sampling(all_packets,good_ips, bad_ips) 
-    random_sampling(all_packets,good_ips, bad_ips) 
+    print "Done reading files, now calculating!"
+    systematic_sampling(all_packets,bad_ips, good_ips) 
+    random_sampling(all_packets,bad_ips, good_ips) 
+    uniform_prob_sampling(all_packets,bad_ips, good_ips)
+    time_end = time.asctime( time.localtime(time.time()) )
 
+    print "experiment started at:", time_start
+    print "experiment ended at:", time_end
+    # print "experiment took" 
 
 if __name__ == "__main__": main(sys.argv[1:])
