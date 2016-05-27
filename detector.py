@@ -142,16 +142,19 @@ def uniform_prob_sampling(all_packets, bad_ips, good_ips):
     return results_tp, results_fp    
 
 def sample_packet(ip_packet, bad_ips, good_ips):
-    if ip_packet.p == dpkt.ip.IP_PROTO_TCP:
-        tcp = ip_packet.data
-        syn_flag =  (tcp.flags & dpkt.tcp.TH_SYN ) != 0
-        ack_flag = (tcp.flags & dpkt.tcp.TH_ACK) != 0
-        ip_source = socket.inet_ntoa(ip_packet.src) # get source ip address
+    try:
+        if ip_packet.p == dpkt.ip.IP_PROTO_TCP:
+            tcp = ip_packet.data
+            syn_flag =  (tcp.flags & dpkt.tcp.TH_SYN ) != 0
+            ack_flag = (tcp.flags & dpkt.tcp.TH_ACK) != 0
+            ip_source = socket.inet_ntoa(ip_packet.src) # get source ip address
 
-        if(syn_flag):
-            bad_ips.add(ip_source)
-        if(ack_flag):
-            good_ips.add(ip_source)
+            if(syn_flag):
+                bad_ips.add(ip_source)
+            if(ack_flag):
+                good_ips.add(ip_source)
+    except AttributeError:
+        return            
 
 def graph(out_stats_tp, out_stats_fp):
     # rates = []
