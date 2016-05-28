@@ -8,11 +8,15 @@ import matplotlib.pyplot as plt
 import gc
 
 sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25, 1, 2, 10, 50, 100]
+titles = {"SS":"Systematic Sampling", "RS": "Random 1 in N Sampling", "US": \
+  "Uniform Sampling"}
+
 
 def delete_negatives(stats):
     for key in stats.keys():
       if (stats[key] < 0):
         del stats[key]
+        stats[key] = 0
 
 def update_beliefs(bad_ips, good_ips):
     #This runs in n^2 time, but it doesn't really matter for such a small N. 
@@ -196,18 +200,21 @@ def graph(out_stats, y_label):
     plt.xscale('log')
     plt.show()
 
-def graph_ind(out_stats, y_label):
+def graph_ind(out_stats, y_label, is_tp):
     for key in out_stats:
          delete_negatives(out_stats[key])
          plt.figure() 
-         plt.title(key)
+         plt.title(titles[key])
          ax1 = plt.axes()
-         ax1.scatter( out_stats[key].keys(), out_stats[key].values(), \
+         ax1.plot( out_stats[key].keys(), out_stats[key].values(), \
              marker='o', linestyle='--', color='r')
          plt.xlabel('Sampling Rate')
          plt.ylabel(y_label)
          plt.xscale('log')
-         ax1.set_ylim([0, 1.1])
+         if is_tp:
+             ax1.set_ylim([0, 1.1])
+         else:
+             ax1.set_ylim([0.0, 0.02])   
          ax1.set_xlim([0, 100.0])
          plt.show()
 
@@ -273,7 +280,7 @@ def main(argv):
     print "experiment ended at:", time_end
     print "experiment took:", time_end - time_start
     print "experiment processed ", len(all_packets)
-    graph_ind(out_stats_tp, "True Positive Rate [%]")
-    graph_ind(out_stats_fp, "False Positive Rate [%]")
+    graph_ind(out_stats_tp, "True Positive Rate [%]", True)
+    graph_ind(out_stats_fp, "False Positive Rate [%]", False)
 
 if __name__ == "__main__": main(sys.argv[1:])
