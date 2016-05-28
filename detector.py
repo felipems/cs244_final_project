@@ -11,6 +11,16 @@ sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25
 titles = {"SS":"Systematic Sampling", "RS": "Random 1 in N Sampling", "US": \
   "Uniform Sampling"}
 
+def sort_map(out_stats):
+  x_vals = [0.001]
+  y_vals = [0.000000001]
+  keys = out_stats.keys()
+  keys.sort()
+  for key in keys:
+    x_vals.append(key)
+    y_vals.append(out_stats[key])
+  y_vals = [y*100 for y in y_vals] 
+  return (x_vals, y_vals)
 
 def delete_negatives(stats):
     for key in stats.keys():
@@ -206,16 +216,22 @@ def graph_ind(out_stats, y_label, is_tp):
          plt.figure() 
          plt.title(titles[key])
          ax1 = plt.axes()
-         ax1.plot( out_stats[key].keys(), out_stats[key].values(), \
+         x_vals, y_vals = sort_map(out_stats[key])
+         print titles[key]
+         print y_label
+         print x_vals
+         print y_vals
+         ax1.plot( x_vals, y_vals, \
              marker='o', linestyle='--', color='r')
-         plt.xlabel('Sampling Rate')
+         plt.xlabel('Sampling Rate [%]')
          plt.ylabel(y_label)
          plt.xscale('log')
          if is_tp:
-             ax1.set_ylim([0, 1.1])
+             ax1.set_ylim([0, 105])
          else:
-             ax1.set_ylim([0.0, 0.02])   
-         ax1.set_xlim([0, 100.0])
+#ax1.set_ylim([0.0, 0.02])   
+             ax1.set_ylim([0.0, 2])   
+#ax1.set_xlim([0, 100.0])
          plt.show()
 
 def main(argv):
