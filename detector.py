@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 import gc
 
 sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25, 1, 2, 10, 50, 100]
+
+def delete_negatives(stats):
+    for key in stats.keys():
+      if (stats[key] < 0):
+        del stats[key]
+
 def update_beliefs(bad_ips, good_ips):
     #This runs in n^2 time, but it doesn't really matter for such a small N. 
     # print "Evil ips size",len(bad_ips)
@@ -55,7 +61,7 @@ def systematic_sampling(all_packets, bad_ips, good_ips):
         # print "Rate is", rate
         num_packets_to_sample = round((rate/100.0) * len(all_packets))
         
-        print "Sampling ", num_packets_to_sample, "packets"
+        print "Sampling ", num_packets_to_sample, "packets at rate ", rate
         if num_packets_to_sample == 0.0: 
             print "Pcap file to small to sample, num packets = 0 !"
             continue
@@ -156,7 +162,7 @@ def sample_packet(ip_packet, bad_ips, good_ips):
     except AttributeError:
         return            
 
-def graph(out_stats_tp, out_stats_fp):
+def graph(out_stats, y_label):
     # rates = []
     # tps = []
     # for rate, tp in out_stats_tp["SS"].items():
@@ -174,14 +180,36 @@ def graph(out_stats_tp, out_stats_fp):
 
     # for elem in tps:
     #     print elem
-    plt.plot( out_stats_tp["SS"].keys(), out_stats_tp["SS"].values(), marker='o', linestyle='--', color='r')
-    plt.plot( out_stats_tp["RS"].keys(), out_stats_tp["RS"].values(), marker='^', linestyle='--', color='b')
-    plt.plot( out_stats_tp["US"].keys(), out_stats_tp["US"].values(), marker='+', linestyle='--', color='g')
-    plt.axis([0.0,100.0, -1.0, 1.1])
+    plt.plot( out_stats["SS"].keys(), out_stats["SS"].values(), \
+        marker='o', linestyle='--', color='r', label="Systematic Sampling")
+    """
+    plt.legend()
+    plt.scatter( out_stats["RS"].keys(), out_stats["RS"].values(), \
+        marker='^', linestyle='--', color='b', label="Random 1 in N Sampling")
+    plt.legend()
+    plt.scatter( out_stats["US"].keys(), out_stats["US"].values(), \
+        marker='+', linestyle='--', color='g', label="Uniform Sampling")
+    plt.legend()
+  """
     plt.xlabel('Sampling Rate')
-    plt.ylabel('True Positive Rate')
-    # plt.xscale('log')
+    plt.ylabel(y_label)
+    plt.xscale('log')
     plt.show()
+
+def graph_ind(out_stats, y_label):
+    for key in out_stats:
+         delete_negatives(out_stats[key])
+         plt.figure() 
+         plt.title(key)
+         ax1 = plt.axes()
+         ax1.scatter( out_stats[key].keys(), out_stats[key].values(), \
+             marker='o', linestyle='--', color='r')
+         plt.xlabel('Sampling Rate')
+         plt.ylabel(y_label)
+         plt.xscale('log')
+         ax1.set_ylim([0, 1.1])
+         ax1.set_xlim([0, 100.0])
+         plt.show()
 
 def main(argv):
     time_start = time.time()
@@ -245,7 +273,7 @@ def main(argv):
     print "experiment ended at:", time_end
     print "experiment took:", time_end - time_start
     print "experiment processed ", len(all_packets)
-    graph(out_stats_tp, out_stats_fp)
-    graph(out_stats_fp, out_stats_fp)
+    graph_ind(out_stats_tp, "True Positive Rate [%]")
+    graph_ind(out_stats_fp, "False Positive Rate [%]")
 
 if __name__ == "__main__": main(sys.argv[1:])
