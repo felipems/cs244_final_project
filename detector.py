@@ -8,11 +8,25 @@ import matplotlib.pyplot as plt
 import gc
 
 sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25, 1, 2, 10, 50, 100]
+titles = {"SS":"Systematic Sampling", "RS": "Random 1 in N Sampling", "US": \
+  "Uniform Sampling"}
+
+def sort_map(out_stats):
+  x_vals = [0.001]
+  y_vals = [0.000000001]
+  keys = out_stats.keys()
+  keys.sort()
+  for key in keys:
+    x_vals.append(key)
+    y_vals.append(out_stats[key])
+  y_vals = [y*100 for y in y_vals] 
+  return (x_vals, y_vals)
 
 def delete_negatives(stats):
     for key in stats.keys():
       if (stats[key] < 0):
         del stats[key]
+        stats[key] = 0
 
 def update_beliefs(bad_ips, good_ips):
     #This runs in n^2 time, but it doesn't really matter for such a small N. 
@@ -196,19 +210,28 @@ def graph(out_stats, y_label):
     plt.xscale('log')
     plt.show()
 
-def graph_ind(out_stats, y_label):
+def graph_ind(out_stats, y_label, is_tp):
     for key in out_stats:
          delete_negatives(out_stats[key])
          plt.figure() 
-         plt.title(key)
+         plt.title(titles[key])
          ax1 = plt.axes()
-         ax1.scatter( out_stats[key].keys(), out_stats[key].values(), \
+         x_vals, y_vals = sort_map(out_stats[key])
+         print titles[key]
+         print y_label
+         print x_vals
+         print y_vals
+         ax1.plot( x_vals, y_vals, \
              marker='o', linestyle='--', color='r')
-         plt.xlabel('Sampling Rate')
+         plt.xlabel('Sampling Rate [%]')
          plt.ylabel(y_label)
          plt.xscale('log')
-         ax1.set_ylim([0, 1.1])
-         ax1.set_xlim([0, 100.0])
+         if is_tp:
+             ax1.set_ylim([0, 105])
+         else:
+#ax1.set_ylim([0.0, 0.02])   
+             ax1.set_ylim([0.0, 2])   
+#ax1.set_xlim([0, 100.0])
          plt.show()
 
 def main(argv):
@@ -273,7 +296,7 @@ def main(argv):
     print "experiment ended at:", time_end
     print "experiment took:", time_end - time_start
     print "experiment processed ", len(all_packets)
-    graph_ind(out_stats_tp, "True Positive Rate [%]")
-    graph_ind(out_stats_fp, "False Positive Rate [%]")
+    graph_ind(out_stats_tp, "True Positive Rate [%]", True)
+    graph_ind(out_stats_fp, "False Positive Rate [%]", False)
 
 if __name__ == "__main__": main(sys.argv[1:])
