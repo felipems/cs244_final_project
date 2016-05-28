@@ -1,0 +1,42 @@
+First, request access to the CAIDA dataset. We cannot share these files 
+without permission, but you should be able to get access in a few days. 
+    https://www.caida.org/data/passive/ddos-20070804_dataset.xml
+
+Next, in order to use dpkt, I recommend spinning up a standard Ubuntu 
+instance on AWS with at least 50GB of disk space and 32 GB of memory 
+(This may be overkill, but it will definitely work). 
+
+SSH into the machine using the -X flag.
+
+When you have the machine set up, download the attack files with the 
+following command:
+
+    wget --user=<username> --password=<pass> -r -nH -nd -np -R index.html* https://data.caida.org/datasets/security/ddos-20070804/to-victim/
+
+Then, clone our github repo. 
+
+    git clone https://github.com/felipems/cs244_final_project
+
+Run our setup script to install any dependencies that might be needed.
+
+    ./installer.sh
+
+In order to reproduce the results, run:
+
+    python detector.py <pcap_file>
+
+The graph will pop up once the pcap file is fully processed and we 
+have done all the sampling methods. 
+
+If you find that you’re hitting a segmentation fault after processing m packets, 
+pass in the flag -m to cap the maximum number of packets read (in millions) 
+from a file.
+
+    python detector.py -m 10 <pcap_file>
+
+So this will stop once you read 10 million packets.  The AWS instance with 32GB 
+of RAM should allow you to read ~27million packets, though.
+
+We ran the CAIDA graphs with the pcap file ddostrace.to-victim.20070804_141436.pcap, 
+and the original dataset with exp31.pcap. Feel free to run on the other CAIDA pcap files
+if you so desire, but some of them are too large/too small.

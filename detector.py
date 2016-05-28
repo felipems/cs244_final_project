@@ -6,6 +6,7 @@ import time
 # import matplotlib
 import matplotlib.pyplot as plt
 import gc
+import argparse
 
 sampling_rates = [0.005, 0.01, 0.02, 0.04, 0.08, 0.016, 0.03, 0.06, 0.0125, 0.25, 1, 2, 10, 50, 100]
 titles = {"SS":"Systematic Sampling", "RS": "Random 1 in N Sampling", "US": \
@@ -240,13 +241,19 @@ def main(argv):
         print "Please include pcap file."
         return 0
 
+    parser = argparse.ArgumentParser(description='Sample PCAP file to detect\
+        SYN Flooding')
+    parser.add_argument('-m', '--maxpackets', type=int)
+    parser.add_argument('file', nargs='+')
+    args = parser.parse_args()
+
     bad_ips = set()
     good_ips = set()
     all_packets = []
     out_stats_tp = {}
     out_stats_fp = {}
 
-
+    argv = args.file
     print "Using these files:"
     for pcap_file in argv:
         print pcap_file
@@ -280,11 +287,18 @@ def main(argv):
             if len(all_packets)%1000000 ==0:             
                 print len(all_packets)/1000000," million"
                 gc.collect()
+                if args.maxpackets is not None and len(all_packets)/1000000 >= args.maxpackets:
+                  break
+        
+        if args.maxpackets is not None and len(all_packets)/1000000 > args.maxpackets:
+          break
+ 
         
     print bad_ips        
     print "Updating beliefs"
     update_beliefs(bad_ips, good_ips)     
-    
+   
+    print "Bad IPs:" 
     print bad_ips
     print "Done reading files, now calculating!"
     out_stats_tp["SS"], out_stats_fp["SS"]  = systematic_sampling(all_packets,bad_ips, good_ips) 
